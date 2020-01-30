@@ -27,11 +27,9 @@ class Message:
 						
 
 	def send(self, msg):
-		print(msg)
-		# for m in msg:
-		# 	for reci in m['id']:
-		# 		self.bot.send_text_message(m['id'], m['message'])
-
+		for m in msg:
+			for reci in m['id']:
+				self.bot.send_text_message(reci, m['message'])
 
 
 class Process:
