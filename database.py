@@ -40,8 +40,9 @@ class DB:
 	def getClassID(self, fb_id):
 		c = self.conn.cursor()
 		c.execute('''SELECT class_id FROM class_room WHERE id=?''',(fb_id,))
-		return c.fetchall()[0]
-					
+		return c.fetchone()[0]
+
+
 	def update(self, classID, status='SUBSCRIBER'):
 		c = self.conn.cursor()
 		c.execute('''UPDATE class_room SET member_type=? WHERE class_id=?''',(status, classID))

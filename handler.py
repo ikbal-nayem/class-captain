@@ -4,7 +4,7 @@ from conf import auth
 from database import DB
 
 class Message:
-
+	pageID = '107595967464218'
 	def __init__(self):
 		self.bot = Bot(auth.BOT_TOKEN)
 		self.pageID = None
@@ -19,9 +19,13 @@ class Message:
 					self.senderID = message['sender']['id']
 					self.pageID = message['recipient']['id']
 					if message.get('message'):
+						if Message.pageID == self.senderID:
+							return
+						self.bot.send_action(self.senderID, 'mark_seen')
 						self.text = message['message']['text']
 						self.mid = message['message']['mid']
-
+						print(self.senderID+': '+self.text)
+						self.bot.send_action(self.senderID, 'typing_on')
 						msg = Process(self.senderID, self.text).start()
 						self.send(msg)
 						
@@ -30,6 +34,7 @@ class Message:
 		for m in msg:
 			for reci in m['id']:
 				self.bot.send_text_message(reci, m['message'])
+
 
 
 class Process:
@@ -92,7 +97,8 @@ class Process:
 
 	def _new(self):
 		if 'id' not in self.msg.lower():
-			replay = f'Dear {INFO(self.senderID).lastName}, you have to write your class ID. (id > \'your_id\')'
+			info = INFO(self.senderID)
+			replay = f'Dear {info.lastName}, you have to write your class ID. (id > \'your_id\')'
 			return [{'id': [self.senderID], 'message': replay},
 							{'id': [self.senderID], 'message': ':)'}]
 		if 'id' in self.msg.lower() and '>' in self.msg:
@@ -135,33 +141,39 @@ class AdminPanel:
 
 	def conversation(self, msg):
 		feedback = None
-		welcome = ['hi', 'hlw', 'hello']
-		tnx = ['thank you', 'tnx', 'thnk u', 'tnk u', 'thanku']
+		welcome = ['hi', 'hlw', 'hello', 'hey', 'hlo']
+		tnx = ['thank you', 'tnx', 'thnk u', 'tnk u', 'thank u']
 		if msg in welcome:
-			feedback = 'hello '+INFO(self.senderID).firstName
+			feedback = msg+' '+INFO(self.senderID).firstName
 		elif msg in tnx:
 			feedback = 'Welcome '+INFO(self.senderID).lastName
 		else:
 			feedback = 'To send a notice type \'*\' before your message.'
-		return [{'id':[self.senderID], 'message':feedback},
-						{'id':[self.senderID], 'message':':)'}]
+		return [{'id':[self.senderID], 'message':feedback}]
 
 	
 	def post(self, msg, to=None):
 		db = DB()
 		receiver = db.getReceiverList()
 		db.close
-		return [{'id':receiver, 'message':msg}]
+		if receiver:
+			return [{'id':receiver, 'message':msg},
+							{'id':[self.senderID], 'message':'Message received.'}]
+		return [{'id':[self.senderID], 'message':'No subscriber found.'}]
 
 
 	def see(self, member='SUBSCRIBER'):
 		db = DB()
-		member_list = db.getReceiverList(member=member)
-		msg = 'Subscriber list:\n\n'
-		for l in member_list:
-			info = INFO(l)
-			cls_id = db.getClassID(l)
-			msg += f'{info.firstName} {info.lastName} ({cls_id})\n'
+		member_list = db.getReceiverList(member=member.upper())
+		msg = f'{member} list:\n\n'
+		if member_list:
+			for l in member_list:
+				info = INFO(l)
+				cls_id = db.getClassID(l)
+				msg += f'{info.firstName} {info.lastName} ({cls_id})\n'
+			db.close()
+		else:
+			msg = f'No {member} found!'
 		return [{'id':[self.senderID], 'message':msg}]
 
 	
@@ -179,11 +191,15 @@ class AdminPanel:
 class INFO:
 
 	def __init__(self, id):
+		self.firstName = None
+		self.lastName = None
+		self.profilePic = None
 		self.url = 'https://graph.facebook.com/v2.6/{}/?access_token={}'.format(id, auth.BOT_TOKEN)
 		self._getUserInfo()
 
 	def _getUserInfo(self):
 		js = requests.get(self.url).json()
-		self.firstName = js['first_name']
-		self.lastName = js['last_name']
-		self.profilePic = js['profile_pic']
+		if js.get('first_name'):
+			self.firstName = js['first_name']
+			self.lastName = js['last_name']
+			self.profilePic = js['profile_pic']
