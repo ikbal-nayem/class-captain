@@ -2,6 +2,7 @@ import requests
 from pymessenger import Bot
 from conf import auth
 from database import DB
+from talk import conversation
 
 class Message:
 	pageID = '107595967464218'
@@ -22,12 +23,14 @@ class Message:
 						if Message.pageID == self.senderID:
 							return
 						self.bot.send_action(self.senderID, 'mark_seen')
-						self.text = message['message']['text']
-						self.mid = message['message']['mid']
-						print(self.senderID+': '+self.text)
-						self.bot.send_action(self.senderID, 'typing_on')
-						msg = Process(self.senderID, self.text).start()
-						self.send(msg)
+						if message['message'].get('text'):
+							self.mid = message['message']['mid']
+							self.text = message['message']['text']
+							print(self.senderID+': '+self.text)
+							self.bot.send_action(self.senderID, 'typing_on')
+						# reply = Process(self.senderID, self.text).start()
+							reply = conversation(self.senderID).official(self.text)
+							self.send(reply)
 						
 
 	def send(self, msg):
