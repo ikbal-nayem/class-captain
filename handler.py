@@ -1,8 +1,10 @@
 import requests
 from pymessenger import Bot
+import random
 from conf import auth
 from database import DB
-from talk import conversation
+
+
 
 class Message:
 	pageID = '107595967464218'
@@ -28,15 +30,21 @@ class Message:
 							self.text = message['message']['text']
 							print(self.senderID+': '+self.text)
 							self.bot.send_action(self.senderID, 'typing_on')
-						# reply = Process(self.senderID, self.text).start()
-							reply = conversation(self.senderID).official(self.text)
-							self.send(reply)
+							try:
+								reply = Process(self.senderID, self.text).start()
+								print(reply)
+								self.send(reply)
+							except Exception as e:
+								print(str(e))
 						
 
 	def send(self, msg):
 		for m in msg:
 			for reci in m['id']:
-				self.bot.send_text_message(reci, m['message'])
+				if m.get('message'):
+					self.bot.send_text_message(reci, m['message'])
+				if m.get('img'):
+					self.bot.send_image_url(reci, m['img'])
 
 
 
@@ -73,6 +81,8 @@ class Process:
 				return action.remove(option.strip())
 			elif command.strip().lower() == 'see':
 				return action.see(option.strip().upper())
+			else:
+				return [{'id':[self.senderID], 'message':'Command error. :('}]
 		else:
 			return action.conversation(self.msg)
 	
@@ -88,6 +98,7 @@ class Process:
 
 
 	def _pending(self):
+		r = ['Your requests is under processing.', 'We have your ID number.We will inform you', 'Contact your class captain to approve your requests.', 'Your requests is still processing.\nPlease contact with your class captain.']
 		db = DB()
 		receiver = db.getReceiverList(member='ADMIN')
 		cls_id = db.getClassID(self.senderID)
@@ -95,39 +106,38 @@ class Process:
 		info = INFO(self.senderID)
 		msg = f'{info.firstName}({cls_id})(panding user)-\n\n{self.msg}'
 		return [{'id':receiver, 'message':msg},
-						{'id':[self.senderID], 'message':'Your requests is still processing.\nPlease contact with your class captain.'}]
+						{'id':[self.senderID], 'message':random.choice(r)}]
 	
 
 	def _new(self):
 		if 'id' not in self.msg.lower():
 			info = INFO(self.senderID)
-			replay = f'Dear {info.lastName}, you have to write your class ID. (id > \'your_id\')'
+			replay = f'Dear {info.lastName},\nYou have to write your class ID. (EX: id = 12345)'
 			return [{'id': [self.senderID], 'message': replay},
 							{'id': [self.senderID], 'message': ':)'}]
-		if 'id' in self.msg.lower() and '>' in self.msg:
-			cls_id = self.msg.split('>')[1].strip()
+		if 'id' in self.msg.lower() and '=' in self.msg:
+			cls_id = self.msg.split('=')[1].strip()
 			db = DB()
 			db.updateID(self.senderID, cls_id)
 			receiver = db.getReceiverList(member='ADMIN')
 			db.close()
 			new_user = INFO(self.senderID)
-			admin_msg = f'''{new_user.lastName} wants to be a member!
-			Name : {new_user.firstName} {new_user.lastName}
-			Class ID : {cls_id}'''
+			admin_msg = f'{new_user.firstName} wants to be a member!\nName : {new_user.firstName} {new_user.lastName}\nID number : {cls_id}'
 			return [{'id':[self.senderID], 'message':'Class captain permission required.\nI will let you know when you would get permission. ;)'},
-							{'id':receiver, 'message':admin_msg}]
+							{'id':receiver, 'message':admin_msg},
+							{'id':receiver, 'img':new_user.profilePic}]
 
 
 	def _welcome(self):
 		if 'id' not in self.msg.lower():
-			replay = f'Hello {INFO(self.senderID).firstName}!\nThis is your class assistent.\nI will notify you if you have any notice about exam, class test etc of your class\n:D'
-			replay1 = 'All you need to do, tell me your id number in the following format:\n\nid > \'your_id_number\''
+			replay = f'Hello {INFO(self.senderID).firstName}!\nThis is your class assistent.\nI will notify you if you have any notice about exam, assignment etc from your class\n:D'
+			replay1 = 'All you need to do, tell me your id number in the following format:\n\nid = <your_class_id>\nEX: id=12345'
 			return [{'id': [self.senderID], 'message': replay},
 							{'id': [self.senderID], 'message': replay1}]
 		return self._new()
 
 
-
+#####				ADMIN PANAL
 
 class AdminPanel:
 	def __init__(self, senderID):
@@ -138,8 +148,10 @@ class AdminPanel:
 		db = DB()
 		db.update(cls_id, status='SUBSCRIBER')
 		fb_id = db.getReceiverList([cls_id])
+		admin = db.getReceiverList(member='ADMIN')
 		db.close()
-		return [{'id':fb_id, 'messagee':'Your request has been approved. ;)'}]
+		return [{'id':fb_id, 'messagee':'Your request has been approved. ;)\nNow you will get all notice from the class captain.'},
+						{'id':admin, 'message':f'ID {cls_id} has been added to the subscriber list.'}]
 
 
 	def conversation(self, msg):
@@ -157,11 +169,15 @@ class AdminPanel:
 	
 	def post(self, msg, to=None):
 		db = DB()
-		receiver = db.getReceiverList()
+		if to=='all':
+			subs = db.getReceiverList(member='SUBSCRIBER')
+			admin = db.getReceiverList(member='ADMIN')
+			info = INFO(self.senderID)
 		db.close
-		if receiver:
-			return [{'id':receiver, 'message':msg},
-							{'id':[self.senderID], 'message':'Message received.'}]
+		if subs:
+			return [{'id':subs, 'message':msg},
+							{'id':[self.senderID], 'message':'Message received.'},
+							{'id':admin, 'message':f'{info.firstName}(Admin) - \n'+msg}]
 		return [{'id':[self.senderID], 'message':'No subscriber found.'}]
 
 
@@ -170,10 +186,10 @@ class AdminPanel:
 		member_list = db.getReceiverList(member=member.upper())
 		msg = f'{member} list:\n\n'
 		if member_list:
-			for l in member_list:
+			for i,l in enumerate(member_list):
 				info = INFO(l)
 				cls_id = db.getClassID(l)
-				msg += f'{info.firstName} {info.lastName} ({cls_id})\n'
+				msg += f'{i+1}. {info.firstName} {info.lastName} ({cls_id})\n'
 			db.close()
 		else:
 			msg = f'No {member} found!'
