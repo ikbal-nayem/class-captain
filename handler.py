@@ -14,6 +14,7 @@ class Message:
 		self.senderID = None
 		self.text = None
 		self.mid = None
+		self.img_url = None
 
 	def received(self, msg):
 		if msg['object'] == 'page':
@@ -31,12 +32,18 @@ class Message:
 							print(self.senderID+': '+self.text)
 							self.bot.send_action(self.senderID, 'typing_on')
 							try:
-								reply = Process(self.senderID, self.text).start()
+								reply = Process(self.senderID, msg=self.text).start()
 								print(reply)
 								self.send(reply)
 							except Exception as e:
 								print(str(e))
-						
+						elif message['message'].get('attachments'):
+							for attachment in message['message']['attachments']:
+								if attachment['payload'].get('url'):
+									self.img_url = attachment['payload']['url']
+									reply = Process(self.senderID).image(self.img_url)
+									print(reply)
+
 
 	def send(self, msg):
 		for m in msg:
@@ -50,9 +57,10 @@ class Message:
 
 class Process:
 
-	def __init__(self, senderID, msg):
+	def __init__(self, senderID, msg=''):
 		self.senderID = senderID
 		self.msg = msg
+		self.url = None
 
 
 	def start(self):
@@ -67,6 +75,10 @@ class Process:
 			return self._new()
 		elif sender_type == 'WELCOME':
 			return self._welcome()
+	
+
+	def image(self):
+		pass
 
 
 	def _admin(self):
@@ -147,7 +159,7 @@ class AdminPanel:
 	def add(self, cls_id):
 		db = DB()
 		db.update(cls_id, status='SUBSCRIBER')
-		fb_id = db.getReceiverList([cls_id])
+		fb_id = db.getReceiverList(specific=cls_id)
 		admin = db.getReceiverList(member='ADMIN')
 		db.close()
 		return [{'id':fb_id, 'messagee':'Your request has been approved. ;)\nNow you will get all notice from the class captain.'},

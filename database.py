@@ -31,8 +31,8 @@ class DB:
 	def getReceiverList(self, specific=None, member='SUBSCRIBER'):
 		c = self.conn.cursor()
 		if specific:
-			q = '''SELECT id FROM class_room WHERE class_id=%s'''
-			return [c.execute(q,(i,)).fetchone()[0] for i in specific]
+			c.execute('''SELECT id FROM class_room WHERE class_id=%s''', (specific,))
+			return [c.fetchall()[0][0]]
 		c.execute('''SELECT id FROM class_room WHERE member_type=%s''',(member,))
 		val = c.fetchall()
 		return [i[0] for i in val] if val else None
@@ -60,6 +60,7 @@ class DB:
 		c = self.conn.cursor()
 		c.execute('''DELETE FROM class_room WHERE class_id=%s ''',(classID,))
 		self.conn.commit()
+
 
 
 
