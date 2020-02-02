@@ -1,4 +1,5 @@
-from flask import Flask, request
+from flask import Flask, request, Response
+import threading
 from conf import auth
 from handler import Message
 
@@ -13,8 +14,9 @@ def token_handler():
 		return 'Welcome to class captain facebook page.'
 	else:
 		output = request.get_json()
-		Message().received(output)
-		return 'success'
+		thread = threading.Thread(target=Message().received, args=(output,))
+		thread.start()
+		return Response(status=200)
 
 
 

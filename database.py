@@ -4,6 +4,7 @@ from conf import auth
 class DB:
 
 	def __init__(self):
+		# self.conn = pymysql.connections.Connection(host='db4free.net', user='abid_captain', password='12345678', database='abid_captain')
 		self.conn = pymysql.connections.Connection(host=auth.db_info['Server'], user=auth.db_info['Username'], password=auth.db_info['Password'], database=auth.db_info['Database'])
 		# self.conn.execute('''create table if not exists class_room(id text PRIMARY KEY, class_id integer, member_type text)''')
 

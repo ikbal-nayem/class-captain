@@ -8,6 +8,7 @@ from database import DB
 
 class Message:
 	pageID = '107595967464218'
+
 	def __init__(self):
 		self.bot = Bot(auth.BOT_TOKEN)
 		self.pageID = None
@@ -16,24 +17,23 @@ class Message:
 		self.mid = None
 		self.img_url = None
 
-	def received(self, msg):
-		if msg['object'] == 'page':
-			for entry in msg['entry']:
+	def received(self, data):
+		if data['object'] == 'page':
+			for entry in data['entry']:
 				for message in entry['messaging']:
 					self.senderID = message['sender']['id']
 					self.pageID = message['recipient']['id']
 					if message.get('message'):
+						self.mid = message['message']['mid']
 						if Message.pageID == self.senderID:
 							return
 						self.bot.send_action(self.senderID, 'mark_seen')
 						if message['message'].get('text'):
-							self.mid = message['message']['mid']
 							self.text = message['message']['text']
 							print(self.senderID+': '+self.text)
 							self.bot.send_action(self.senderID, 'typing_on')
 							try:
 								reply = Process(self.senderID, msg=self.text).start()
-								print(reply)
 								self.send(reply)
 							except Exception as e:
 								print(str(e))
@@ -42,16 +42,18 @@ class Message:
 								if attachment['payload'].get('url'):
 									self.img_url = attachment['payload']['url']
 									reply = Process(self.senderID).image(self.img_url)
-									print(reply)
+									self.send(reply)
 
 
 	def send(self, msg):
 		for m in msg:
 			for reci in m['id']:
 				if m.get('message'):
-					self.bot.send_text_message(reci, m['message'])
+					mg = m['message']
+					self.bot.send_text_message(reci, mg)
 				if m.get('img'):
-					self.bot.send_image_url(reci, m['img'])
+					ig = m['img']
+					self.bot.send_image_url(reci, ig)
 
 
 
@@ -77,14 +79,30 @@ class Process:
 			return self._welcome()
 	
 
-	def image(self):
-		pass
+	def image(self, link):
+		sender_type = DB().checkMember(self.senderID)
+		db = DB()
+		if sender_type == 'ADMIN':
+			subs = db.getReceiverList(member='SUBSCRIBER')
+			admin = db.getReceiverList(member='ADMIN')
+			del admin[admin.index(self.senderID)]
+			db.close()
+			return [{'id':subs, 'img':link},
+							{'id':admin, 'message':INFO(self.senderID).firstName+'(ADMIN)-'},
+							{'id':admin, 'img':link},
+							{'id':[self.senderID], 'message':'Photo sent ;)'}]
+		elif sender_type == 'SUBSCRIBER':
+			admin = db.getReceiverList(member='ADMIN')
+			cls_id = db.getClassID(self.senderID)
+			db.close()
+			return [{'id':admin, 'message':INFO(self.senderID).firstName+f'({cls_id})-'},
+							{'id':admin, 'img':link}]
 
 
 	def _admin(self):
 		action = AdminPanel(self.senderID)
 		if '*' in self.msg[0]:
-			return action.post(self.msg[1:-1], to='all')
+			return action.post(self.msg[1:], to='all')
 		elif '>' in self.msg:
 			command, option = self.msg.split('>')
 			if command.strip().lower() == 'add':
@@ -105,7 +123,7 @@ class Process:
 		cls_id = db.getClassID(self.senderID)
 		db.close()
 		info = INFO(self.senderID)
-		msg = f'{info.firstName}({cls_id})-\n\n{self.msg}'
+		msg = f'{info.firstName}({cls_id})-\n{self.msg}'
 		return [{'id':receiver, 'message':msg}]
 
 
@@ -116,7 +134,7 @@ class Process:
 		cls_id = db.getClassID(self.senderID)
 		db.close()
 		info = INFO(self.senderID)
-		msg = f'{info.firstName}({cls_id})(panding user)-\n\n{self.msg}'
+		msg = f'{info.firstName}({cls_id})(panding)-\n{self.msg}'
 		return [{'id':receiver, 'message':msg},
 						{'id':[self.senderID], 'message':random.choice(r)}]
 	
@@ -184,12 +202,13 @@ class AdminPanel:
 		if to=='all':
 			subs = db.getReceiverList(member='SUBSCRIBER')
 			admin = db.getReceiverList(member='ADMIN')
+			del admin[admin.index(self.senderID)]
 			info = INFO(self.senderID)
 		db.close
 		if subs:
 			return [{'id':subs, 'message':msg},
-							{'id':[self.senderID], 'message':'Message received.'},
-							{'id':admin, 'message':f'{info.firstName}(Admin) - \n'+msg}]
+							{'id':[self.senderID], 'message':'Message sent.'},
+							{'id':admin, 'message':f'{info.firstName}(ADMIN) - \n'+msg}]
 		return [{'id':[self.senderID], 'message':'No subscriber found.'}]
 
 
