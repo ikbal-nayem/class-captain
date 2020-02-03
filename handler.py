@@ -1,4 +1,5 @@
 import requests
+import time
 from pymessenger import Bot
 import random
 from conf import auth
@@ -47,7 +48,10 @@ class Message:
 
 	def send(self, msg):
 		for m in msg:
-			for reci in m['id']:
+			print(f"Sending message to {len(m['id'])} peoples.")
+			for i, reci in enumerate(m['id']):
+				if i==30 or i==15:
+					time.sleep(10)
 				if m.get('message'):
 					mg = m['message']
 					self.bot.send_text_message(reci, mg)
@@ -80,17 +84,17 @@ class Process:
 	
 
 	def image(self, link):
-		sender_type = DB().checkMember(self.senderID)
 		db = DB()
+		sender_type = db.checkMember(self.senderID)
 		if sender_type == 'ADMIN':
 			subs = db.getReceiverList(member='SUBSCRIBER')
 			admin = db.getReceiverList(member='ADMIN')
 			del admin[admin.index(self.senderID)]
 			db.close()
 			return [{'id':subs, 'img':link},
+							{'id':[self.senderID], 'message':'Photo sent ;)'},
 							{'id':admin, 'message':INFO(self.senderID).firstName+'(ADMIN)-'},
-							{'id':admin, 'img':link},
-							{'id':[self.senderID], 'message':'Photo sent ;)'}]
+							{'id':admin, 'img':link}]
 		elif sender_type == 'SUBSCRIBER':
 			admin = db.getReceiverList(member='ADMIN')
 			cls_id = db.getClassID(self.senderID)
@@ -112,7 +116,17 @@ class Process:
 			elif command.strip().lower() == 'see':
 				return action.see(option.strip().upper())
 			else:
-				return [{'id':[self.senderID], 'message':'Command error. :('}]
+				try:
+					int(command.strip())
+					db = DB()
+					checkID = db.getReceiverList(specific=command.strip())
+					db.close()
+					return [{'id':checkID, 'message':option.strip()}]
+				except Exception as e:
+					db.close()
+					if e == 'tuple index out of range':
+						return [{'id':[self.senderID], 'message':'Wrong ID'}]
+					return [{'id':[self.senderID], 'message':'Command error. :('}]
 		else:
 			return action.conversation(self.msg)
 	
