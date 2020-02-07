@@ -1,24 +1,11 @@
 class auth:
-
-	CONFIG = {
-		"apiKey": "AIzaSyCvvDkM85fj8BMWJ9i0JFgoQVL2cDaYUZ4",
-		"authDomain": "msgbot-293d3.firebaseapp.com",
-		"databaseURL": "https://msgbot-293d3.firebaseio.com",
-		"projectId": "msgbot-293d3",
-		"storageBucket": "msgbot-293d3.appspot.com",
-		"messagingSenderId": "586817029821",
-		"appId": "1:586817029821:web:68f414134931710a4319d4"
-	}
-
-	BOT_TOKEN = 'EAAC5audzX3QBAGSoEo8bU3zvFAkoJMrZBJY0UooxavyiBFJ48ZBFtD6ZBPeEi3ZBc8xr9ZCNNPxznNtRK9DsFlNAUFOdesRfzZCLgOtzgmtypTWGTogUCZCen5zyWU98DJOk8A1EqnMg2sTk0T02TuZCB0KcVToN0NNALhlZChQgpbKYK8XFdKxdL'
-	VERIFY_TOKEN = 'itsabidtheclasscaptain'
+	BOT_TOKEN = '<your_messenger_bot_token_given_by_facebook>'
+	VERIFY_TOKEN = '<your_app_verify_token>'
 
 	db_info = {
-		'email': 'fotruluydi@enayu.com',
-		'pass': 'wbi',
-		'Username': 'jMQ1b4AojB',
-		'Database': 'jMQ1b4AojB',
-		'Password': 'lpQ506EJPA',
-		'Server': 'remotemysql.com',
+		'Username': '<database_username>',
+		'Database': '<database_name>',
+		'Password': '<database_password>',
+		'Server': '<database_address>',
 		'Port': 3306
 	}
