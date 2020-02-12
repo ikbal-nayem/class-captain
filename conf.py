@@ -6,6 +6,6 @@ class auth:
 		'Username': 'jMQ1b4AojB',
 		'Database': 'jMQ1b4AojB',
 		'Password': 'lpQ506EJPA',
-		'Server': 'remotemysql',
+		'Server': 'remotemysql.com',
 		'Port': 3306
 	}
