@@ -50,8 +50,6 @@ class Message:
 		for m in msg:
 			print(f"Sending message to {len(m['id'])} peoples.")
 			for i, reci in enumerate(m['id']):
-				if i==30 or i==15:
-					time.sleep(10)
 				if m.get('message'):
 					mg = m['message']
 					self.bot.send_text_message(reci, mg)
